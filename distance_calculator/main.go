@@ -13,6 +13,7 @@ var kafkaTopic = "obudata"
 
 func main() {
 	service := NewCalculatorService()
+	service = NewLogMiddleware(service)
 	kafkaConsumer, err := NewKafkaConsumer(kafkaTopic, service)
 	if err != nil {
 		logrus.Fatal(err)
