@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -19,8 +20,8 @@ func NewHttpClient(endpoint string) *HttpClient {
 	}
 }
 
-func (c *HttpClient) AggregateInvoice(distance types.Distance) error {
-	b, err := json.Marshal(distance)
+func (c *HttpClient) Aggregate(ctx context.Context, aggReq *types.AggregateRequest) error {
+	b, err := json.Marshal(aggReq)
 	if err != nil {
 		return err
 	}

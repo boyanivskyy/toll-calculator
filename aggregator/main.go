@@ -34,14 +34,14 @@ func main() {
 	if err != nil {
 		logrus.Fatal("NewGRPCClient", err)
 	}
-	_, err = c.Aggregate(context.Background(), &types.AggregateRequest{
+	if err := c.Aggregate(context.Background(), &types.AggregateRequest{
 		ObuId: 1,
 		Value: 33.33,
 		Unix:  time.Now().UnixNano(),
-	}, grpc.EmptyCallOption{})
-	if err != nil {
+	}); err != nil {
 		logrus.Fatal(err)
 	}
+
 	logrus.Fatal(makeHTTPTransport(*httpListenAddr, service))
 }
 
