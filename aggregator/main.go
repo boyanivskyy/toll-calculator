@@ -1,14 +1,18 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"net"
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/boyanivskyy/toll-calculator/aggregator/client"
 	"github.com/boyanivskyy/toll-calculator/types"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
@@ -20,31 +24,48 @@ func main() {
 	store := NewMemoryStore()
 	service := NewInvoiceAggregator(store)
 	service = NewLoggingMiddleware(service)
-	go makeGRPCTransport(*grpcListenAddr, service)
-	makeHTTPTransport(*httpListenAddr, service)
+	go func() {
+		if err := makeGRPCTransport(*grpcListenAddr, service); err != nil {
+			logrus.Fatal(err)
+		}
+	}()
+	time.Sleep(time.Second * 2)
+	c, err := client.NewGRPCClient(*grpcListenAddr)
+	if err != nil {
+		logrus.Fatal("NewGRPCClient", err)
+	}
+	_, err = c.Aggregate(context.Background(), &types.AggregateRequest{
+		ObuId: 1,
+		Value: 33.33,
+		Unix:  time.Now().UnixNano(),
+	}, grpc.EmptyCallOption{})
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	logrus.Fatal(makeHTTPTransport(*httpListenAddr, service))
 }
 
 func makeGRPCTransport(listenAddress string, service Aggregator) error {
 	fmt.Println("GRPC transporter running on port", listenAddress)
 	// Make a TCP listener
-	listener, err := net.Listen("TCP", listenAddress)
+	listener, err := net.Listen("tcp", listenAddress)
 	if err != nil {
 		return err
 	}
 	defer listener.Close()
 
 	// Make a new gRPC native server
-	server := grpc.NewServer([]grpc.ServerOption{}...)
+	server := grpc.NewServer(grpc.EmptyServerOption{})
 	// Register gRPC server implementation into gRPC server package
 	types.RegisterAggregatorServer(server, NewGRPSServer(service))
 	return server.Serve(listener)
 }
 
-func makeHTTPTransport(listenAddress string, service Aggregator) {
+func makeHTTPTransport(listenAddress string, service Aggregator) error {
 	fmt.Println("HTTP transporter running on port", listenAddress)
 	http.HandleFunc("/aggregate", handleAggregate(service))
 	http.HandleFunc("/invoice", handleGetInvoice(service))
-	http.ListenAndServe(listenAddress, nil)
+	return http.ListenAndServe(listenAddress, nil)
 }
 
 func handleGetInvoice(service Aggregator) http.HandlerFunc {

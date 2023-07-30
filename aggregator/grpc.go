@@ -1,6 +1,10 @@
 package main
 
-import "github.com/boyanivskyy/toll-calculator/types"
+import (
+	"context"
+
+	"github.com/boyanivskyy/toll-calculator/types"
+)
 
 // NOTE: aggregator service for GRPC, maybe it should be renamed to some more meaningful file name
 
@@ -16,12 +20,12 @@ func NewGRPSServer(service Aggregator) *GRPSAggregatorServer {
 
 }
 
-func (s *GRPSAggregatorServer) AggregateDistance(req types.AggregateRequest) error {
+func (s *GRPSAggregatorServer) Aggregate(ctx context.Context, req *types.AggregateRequest) (*types.None, error) {
 	distance := types.Distance{
 		OBUID: int(req.ObuId),
 		Value: req.Value,
 		Unix:  req.Unix,
 	}
 
-	return s.service.AggregateDistance(distance)
+	return &types.None{}, s.service.AggregateDistance(distance)
 }

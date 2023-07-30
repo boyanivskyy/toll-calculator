@@ -19,7 +19,7 @@ const aggregatorEndpoint = "http://localhost:3000/aggregate"
 func main() {
 	service := NewCalculatorService()
 	service = NewLogMiddleware(service)
-	client := client.NewClient(aggregatorEndpoint)
+	client := client.NewHttpClient(aggregatorEndpoint)
 	kafkaConsumer, err := NewKafkaConsumer(kafkaTopic, service, client)
 	if err != nil {
 		logrus.Fatal(err)
