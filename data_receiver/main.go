@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/boyanivskyy/toll-calculator/types"
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -64,7 +64,7 @@ func (dr *DataReceiver) handleWS(w http.ResponseWriter, r *http.Request) {
 }
 
 func (dr *DataReceiver) wsReceiveLoop() {
-	fmt.Println("New OBU client(data_receiver) connected!")
+	logrus.Info("New OBU client(data_receiver) connected!")
 
 	for {
 		data := types.OBUData{}

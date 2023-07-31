@@ -21,13 +21,13 @@ func main() {
 	service := NewCalculatorService()
 	service = NewLogMiddleware(service)
 
-	// httpClient := client.NewHttpClient(httpAggregatorEndpoint)
-	grpcClient, err := client.NewGRPCClient(grpcAggEndpoint)
-	if err != nil {
-		logrus.Fatal(err)
-	}
+	httpClient := client.NewHttpClient(httpAggregatorEndpoint)
+	// grpcClient, err := client.NewGRPCClient(grpcAggEndpoint)
+	// if err != nil {
+	// 	logrus.Fatal(err)
+	// }
 
-	kafkaConsumer, err := NewKafkaConsumer(kafkaTopic, service, grpcClient)
+	kafkaConsumer, err := NewKafkaConsumer(kafkaTopic, service, httpClient)
 	if err != nil {
 		logrus.Fatal(err)
 	}

@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/boyanivskyy/toll-calculator/types"
 	"google.golang.org/grpc"
@@ -28,7 +27,10 @@ func NewGRPCClient(endpoint string) (*GRPCClient, error) {
 }
 
 func (c *GRPCClient) Aggregate(ctx context.Context, req *types.AggregateRequest) error {
-	fmt.Println("HELLO WORLD")
 	_, err := c.Client.Aggregate(ctx, req, grpc.EmptyCallOption{})
 	return err
+}
+
+func (c *GRPCClient) GetInvoice(ctx context.Context, id int) (*types.Invoice, error) {
+	return nil, nil
 }
