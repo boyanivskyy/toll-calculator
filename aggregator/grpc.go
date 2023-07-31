@@ -22,7 +22,7 @@ func NewGRPSServer(service Aggregator) *GRPSAggregatorServer {
 
 func (s *GRPSAggregatorServer) Aggregate(ctx context.Context, req *types.AggregateRequest) (*types.None, error) {
 	distance := types.Distance{
-		OBUID: int(req.ObuId),
+		OBUID: int(req.OBUID),
 		Value: req.Value,
 		Unix:  req.Unix,
 	}

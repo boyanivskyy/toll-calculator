@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"net"
 	"net/http"
 	"strconv"
@@ -35,7 +34,7 @@ func main() {
 		logrus.Fatal("NewGRPCClient", err)
 	}
 	if err := c.Aggregate(context.Background(), &types.AggregateRequest{
-		ObuId: 1,
+		OBUID: 1,
 		Value: 33.33,
 		Unix:  time.Now().UnixNano(),
 	}); err != nil {
@@ -46,7 +45,7 @@ func main() {
 }
 
 func makeGRPCTransport(listenAddress string, service Aggregator) error {
-	fmt.Println("GRPC transporter running on port", listenAddress)
+	logrus.Infof("GRPC transporter running on port", listenAddress)
 	// Make a TCP listener
 	listener, err := net.Listen("tcp", listenAddress)
 	if err != nil {
@@ -62,7 +61,7 @@ func makeGRPCTransport(listenAddress string, service Aggregator) error {
 }
 
 func makeHTTPTransport(listenAddress string, service Aggregator) error {
-	fmt.Println("HTTP transporter running on port", listenAddress)
+	logrus.Infof("HTTP transporter running on port %s", listenAddress)
 	http.HandleFunc("/aggregate", handleAggregate(service))
 	http.HandleFunc("/invoice", handleGetInvoice(service))
 	return http.ListenAndServe(listenAddress, nil)

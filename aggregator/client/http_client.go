@@ -40,3 +40,11 @@ func (c *HttpClient) Aggregate(ctx context.Context, aggReq *types.AggregateReque
 
 	return nil
 }
+
+func (c *HttpClient) GetInvoice(ctx context.Context, id int) (*types.Invoice, error) {
+	return &types.Invoice{
+		OBUID:         1,
+		TotalDistance: 123.123,
+		TotalAmount:   1230,
+	}, nil
+}

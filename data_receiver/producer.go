@@ -28,14 +28,13 @@ func NewKafkaProducer(topic string) (DataProducer, error) {
 			switch ev := e.(type) {
 			case *kafka.Message:
 				if ev.TopicPartition.Error != nil {
-					// fmt.Printf("Delivery failed: %v\n", ev.TopicPartition)
+					// logrus.Printf("Delivery failed: %v\n", ev.TopicPartition)
 				} else {
-					// fmt.Printf("Delivered message to %v\n", ev.TopicPartition)
+					// logrus.Printf("Delivered message to %v\n", ev.TopicPartition)
 					data := types.OBUData{}
 					if err := json.Unmarshal(ev.Value, &data); err != nil {
-						// log.Fatal("Failed to unmarshall kafka message value")
+						// logrus.Fatal("Failed to unmarshall kafka message value")
 					}
-					// fmt.Println("data", data)
 				}
 			}
 		}
