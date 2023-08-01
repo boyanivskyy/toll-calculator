@@ -11,7 +11,7 @@ import (
 
 var kafkaTopic = "obudata"
 
-const httpAggregatorEndpoint = "http://localhost:3000/aggregate"
+const httpAggregatorEndpoint = "http://localhost:3000"
 const grpcAggEndpoint = "localhost:3001"
 
 // Transport can be HTTP, gRPC, Kafka
