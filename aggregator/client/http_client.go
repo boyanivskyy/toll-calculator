@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/boyanivskyy/toll-calculator/types"
+	"github.com/sirupsen/logrus"
 )
 
 type HttpClient struct {
@@ -50,7 +51,9 @@ func (c *HttpClient) GetInvoice(ctx context.Context, id int) (*types.Invoice, er
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, c.Endpoint+"/invoice", bytes.NewReader(b))
+	endpoint := fmt.Sprintf("%s/%s?obuId=%d", c.Endpoint, "invoice", id)
+	logrus.Infof("HERE endpoint %s", endpoint)
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(b))
 	if err != nil {
 		return nil, err
 	}

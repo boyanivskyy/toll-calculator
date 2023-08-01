@@ -28,7 +28,12 @@ func NewInvoiceAggregator(store Storer) Aggregator {
 }
 
 func (i *InvoiceAggregator) AggregateDistance(distance types.Distance) error {
-	logrus.Infof("Processing and inserting distance in the storage", distance)
+	logrus.Info("Processing and inserting distance in the storage", distance)
+	logrus.WithFields(logrus.Fields{
+		"obuId":    distance.OBUID,
+		"distance": distance.Value,
+		"unix":     distance.Unix,
+	}).Info("InvoiceAggregator.AggregateDistance")
 	return i.store.Insert(distance)
 }
 func (i *InvoiceAggregator) CalculateInvoice(obuId int) (*types.Invoice, error) {
