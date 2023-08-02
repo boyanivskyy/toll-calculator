@@ -11,6 +11,7 @@ import (
 
 	"github.com/boyanivskyy/toll-calculator/aggregator/client"
 	"github.com/boyanivskyy/toll-calculator/types"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -22,6 +23,7 @@ func main() {
 
 	store := NewMemoryStore()
 	service := NewInvoiceAggregator(store)
+	service = NewMetricsMiddleware(service)
 	service = NewLoggingMiddleware(service)
 	go func() {
 		if err := makeGRPCTransport(*grpcListenAddr, service); err != nil {
@@ -45,7 +47,7 @@ func main() {
 }
 
 func makeGRPCTransport(listenAddress string, service Aggregator) error {
-	logrus.Infof("GRPC transporter running on port", listenAddress)
+	logrus.Info("GRPC transporter running on port", listenAddress)
 	// Make a TCP listener
 	listener, err := net.Listen("tcp", listenAddress)
 	if err != nil {
@@ -61,9 +63,11 @@ func makeGRPCTransport(listenAddress string, service Aggregator) error {
 }
 
 func makeHTTPTransport(listenAddress string, service Aggregator) error {
-	logrus.Infof("HTTP transporter running on port %s", listenAddress)
+	logrus.Info("HTTP transporter running on port", listenAddress)
 	http.HandleFunc("/aggregate", handleAggregate(service))
 	http.HandleFunc("/invoice", handleGetInvoice(service))
+	http.Handle("/metrics", promhttp.Handler())
+
 	return http.ListenAndServe(listenAddress, nil)
 }
 
@@ -71,6 +75,7 @@ func handleGetInvoice(service Aggregator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		values, ok := r.URL.Query()["obuId"]
 		if !ok {
+			logrus.Error("/invoice: No obuId ")
 			writeJSON(w, http.StatusBadRequest, map[string]string{
 				"error": "No obuId",
 			})
@@ -78,6 +83,7 @@ func handleGetInvoice(service Aggregator) http.HandlerFunc {
 		}
 		obuId, err := strconv.Atoi(values[0])
 		if err != nil {
+			logrus.Errorf("/invoice: Invalid obuId(%d)", obuId)
 			writeJSON(w, http.StatusBadRequest, map[string]string{
 				"error": "invalid of obuId",
 			})
@@ -86,6 +92,7 @@ func handleGetInvoice(service Aggregator) http.HandlerFunc {
 
 		invoice, err := service.CalculateInvoice(obuId)
 		if err != nil {
+			logrus.Errorf("/invoice: Error calculating invoice(%s)", err)
 			writeJSON(w, http.StatusInternalServerError, map[string]string{
 				"error": err.Error(),
 			})
@@ -100,12 +107,14 @@ func handleAggregate(service Aggregator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var distance types.Distance
 		if err := json.NewDecoder(r.Body).Decode(&distance); err != nil {
+			logrus.Errorf("/aggregate: Error decoding request body(%s)", err)
 			writeJSON(w, http.StatusBadRequest, map[string]string{
 				"error": err.Error(),
 			})
 			return
 		}
 		if err := service.AggregateDistance(distance); err != nil {
+			logrus.Errorf("/aggregate: Error aggregating distance(%s)", err)
 			writeJSON(w, http.StatusInternalServerError, map[string]string{
 				"error": err.Error(),
 			})
