@@ -1,49 +1,38 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
-	"flag"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
-	"time"
 
-	"github.com/boyanivskyy/toll-calculator/aggregator/client"
 	"github.com/boyanivskyy/toll-calculator/types"
+	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
 func main() {
-	httpListenAddr := flag.String("httpListenaddr", ":3000", "the listen address of the HTTP server")
-	grpcListenAddr := flag.String("grpcListenAddr", ":3001", "the listen address of the GRPC server")
-	flag.Parse()
-
-	store := NewMemoryStore()
-	service := NewInvoiceAggregator(store)
-	service = NewMetricsMiddleware(service)
-	service = NewLoggingMiddleware(service)
-	go func() {
-		if err := makeGRPCTransport(*grpcListenAddr, service); err != nil {
-			logrus.Fatal(err)
-		}
-	}()
-	time.Sleep(time.Second * 2)
-	c, err := client.NewGRPCClient(*grpcListenAddr)
-	if err != nil {
-		logrus.Fatal("NewGRPCClient", err)
-	}
-	if err := c.Aggregate(context.Background(), &types.AggregateRequest{
-		OBUID: 1,
-		Value: 33.33,
-		Unix:  time.Now().UnixNano(),
-	}); err != nil {
+	if err := godotenv.Load(); err != nil {
 		logrus.Fatal(err)
 	}
 
-	logrus.Fatal(makeHTTPTransport(*httpListenAddr, service))
+	grpcListenAddr := os.Getenv("AGG_GRPC_ENDPOINT")
+	httpListenAddr := os.Getenv("AGG_HTTP_ENDPOINT")
+	store := makeStore()
+	service := NewInvoiceAggregator(store)
+	service = NewMetricsMiddleware(service)
+	service = NewLoggingMiddleware(service)
+
+	go func() {
+		if err := makeGRPCTransport(grpcListenAddr, service); err != nil {
+			logrus.Fatal(err)
+		}
+	}()
+
+	logrus.Fatal(makeHTTPTransport(httpListenAddr, service))
 }
 
 func makeGRPCTransport(listenAddress string, service Aggregator) error {
@@ -73,6 +62,12 @@ func makeHTTPTransport(listenAddress string, service Aggregator) error {
 
 func handleGetInvoice(service Aggregator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error": "method not supported",
+			})
+		}
+
 		values, ok := r.URL.Query()["obuId"]
 		if !ok {
 			logrus.Error("/invoice: No obuId ")
@@ -105,6 +100,12 @@ func handleGetInvoice(service Aggregator) http.HandlerFunc {
 
 func handleAggregate(service Aggregator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error": "method not supported",
+			})
+		}
+
 		var distance types.Distance
 		if err := json.NewDecoder(r.Body).Decode(&distance); err != nil {
 			logrus.Errorf("/aggregate: Error decoding request body(%s)", err)
@@ -120,6 +121,17 @@ func handleAggregate(service Aggregator) http.HandlerFunc {
 			})
 			return
 		}
+	}
+}
+
+func makeStore() Storer {
+	t := os.Getenv("AGG_STORE_TYPE")
+	switch t {
+	case "memory":
+		return NewMemoryStore()
+	default:
+		logrus.Fatalf("invalid store type %s", t)
+		return nil
 	}
 }
 
