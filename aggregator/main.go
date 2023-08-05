@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"net"
 	"net/http"
 	"os"
@@ -51,12 +50,15 @@ func makeGRPCTransport(listenAddress string, service Aggregator) error {
 }
 
 func makeHTTPTransport(listenAddress string, service Aggregator) error {
-	aggregateMetricsHandler := newHTTPMetricsHandler("aggregate")
-	invoiceMetricsHandler := newHTTPMetricsHandler("invoice")
-	http.HandleFunc("/aggregate", aggregateMetricsHandler.instrument(handleAggregate(service)))
-	http.HandleFunc("/invoice", invoiceMetricsHandler.instrument(handleGetInvoice(service)))
+	var (
+		aggregateMetricsHandler = newHTTPMetricsHandler("aggregate")
+		invoiceMetricsHandler   = newHTTPMetricsHandler("invoice")
+		invoiceHandler          = makeHttpHandlerFunc(invoiceMetricsHandler.instrument(handleGetInvoice(service)))
+		aggregateHandler        = makeHttpHandlerFunc(aggregateMetricsHandler.instrument(handleAggregate(service)))
+	)
 
-	// prometheus endpoint
+	http.HandleFunc("/aggregate", aggregateHandler)
+	http.HandleFunc("/invoice", invoiceHandler)
 	http.Handle("/metrics", promhttp.Handler())
 
 	logrus.Info("HTTP transporter running on port", listenAddress)
@@ -72,10 +74,4 @@ func makeStore() Storer {
 		logrus.Fatalf("invalid store type %s", t)
 		return nil
 	}
-}
-
-func writeJSON(rw http.ResponseWriter, status int, v any) error {
-	rw.WriteHeader(status)
-	rw.Header().Add("Content-Type", "application/json")
-	return json.NewEncoder(rw).Encode(v)
 }
