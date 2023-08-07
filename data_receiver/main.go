@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"math"
+	"math/rand"
 	"net/http"
 
 	"github.com/boyanivskyy/toll-calculator/types"
@@ -68,10 +70,13 @@ func (dr *DataReceiver) wsReceiveLoop() {
 
 	for {
 		data := types.OBUData{}
+		reqId := rand.Intn(math.MaxInt)
 		if err := dr.conn.ReadJSON(&data); err != nil {
 			log.Println("read ws error:", err)
 			continue
 		}
+		data.RequestId = reqId
+
 		if err := dr.produceData(data); err != nil {
 			log.Println("kafka produce error", err)
 		}

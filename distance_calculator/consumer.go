@@ -36,6 +36,11 @@ func NewKafkaConsumer(topic string, service CalculatorServicer, client client.Cl
 	}, nil
 }
 
+func (c *KafkaConsumer) Close() {
+	logrus.Info("kafka transport(consumer) closed")
+	c.isRunning = false
+}
+
 func (c *KafkaConsumer) Start() {
 	logrus.Info("kafka transport(consumer) started")
 	c.isRunning = true
@@ -54,6 +59,10 @@ func (c *KafkaConsumer) readMessageLoop() {
 		data := types.OBUData{}
 		if err := json.Unmarshal(msg.Value, &data); err != nil {
 			logrus.Error("JSON serialization failed", err)
+			logrus.WithFields(logrus.Fields{
+				"err":       err,
+				"requestId": data.RequestId,
+			})
 			continue
 		}
 		distance, err := c.calculatorService.CalculateDistance(data)
@@ -65,6 +74,7 @@ func (c *KafkaConsumer) readMessageLoop() {
 			Value: distance,
 			Unix:  time.Now().UnixNano(),
 			OBUID: int32(data.OBUID),
+			// RequestId: data.RequestId,
 		}
 		if err := c.aggregationClient.Aggregate(context.Background(), reqBody); err != nil {
 			logrus.Errorf("aggregate error %s", err)
