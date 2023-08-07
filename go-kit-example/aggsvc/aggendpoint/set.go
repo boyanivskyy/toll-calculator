@@ -2,15 +2,36 @@ package aggendpoint
 
 import (
 	"context"
+	"time"
 
 	"github.com/boyanivskyy/toll-calculator/go-kit-example/aggsvc/aggservice"
 	"github.com/boyanivskyy/toll-calculator/types"
+	"github.com/go-kit/kit/circuitbreaker"
 	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/ratelimit"
+	"github.com/go-kit/log"
+	"github.com/sony/gobreaker"
+	"golang.org/x/time/rate"
 )
 
 type Set struct {
 	AggregateEndpoint endpoint.Endpoint
 	CalculateEndpoint endpoint.Endpoint
+}
+
+func New(svc aggservice.Service, logger log.Logger) Set {
+	var aggregateEndpoint = MakeAggregateEndpoint(svc)
+	aggregateEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 1))(aggregateEndpoint)
+	aggregateEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(aggregateEndpoint)
+
+	var calculateEndpoint = MakeCalculateEndpoint(svc)
+	calculateEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 1))(calculateEndpoint)
+	calculateEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(calculateEndpoint)
+
+	return Set{
+		AggregateEndpoint: aggregateEndpoint,
+		CalculateEndpoint: calculateEndpoint,
+	}
 }
 
 type AggregateRequest struct {

@@ -2,6 +2,7 @@ package aggservice
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/boyanivskyy/toll-calculator/types"
 )
@@ -18,6 +19,7 @@ type BasicService struct {
 }
 
 func (svc *BasicService) Aggregate(ctx context.Context, distance types.Distance) error {
+	fmt.Println("Aggregate in service")
 	return svc.store.Insert(distance)
 }
 
@@ -42,7 +44,7 @@ func newBasicService(store Storer) Service {
 
 // NewAggregatorService will construct complete microservice
 // with logging and instrumentation middleware
-func NewAggregatorService() Service {
+func New() Service {
 	var svc Service
 	{
 		svc = newBasicService(NewMemoryStore())
