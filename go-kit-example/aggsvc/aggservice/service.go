@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/boyanivskyy/toll-calculator/types"
+	"github.com/go-kit/log"
 )
 
 const basePrice = 3.15
@@ -42,11 +43,13 @@ func newBasicService(store Storer) Service {
 
 // NewAggregatorService will construct complete microservice
 // with logging and instrumentation middleware
-func NewAggregatorService() Service {
+func New(logger log.Logger) Service {
+	logger = log.With(logger, "service", "aggregator")
+
 	var svc Service
 	{
 		svc = newBasicService(NewMemoryStore())
-		svc = newLoggingMiddleware()(svc)
+		svc = newLoggingMiddleware(logger)(svc)
 		svc = newInstrumentationMiddleware()(svc)
 	}
 
