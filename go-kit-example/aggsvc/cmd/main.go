@@ -9,6 +9,7 @@ import (
 	"github.com/boyanivskyy/toll-calculator/go-kit-example/aggsvc/aggservice"
 	"github.com/boyanivskyy/toll-calculator/go-kit-example/aggsvc/aggtransport"
 	"github.com/go-kit/log"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -19,7 +20,7 @@ func main() {
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
 
-	service := aggservice.New()
+	service := aggservice.New(logger)
 	endpoints := aggendpoint.New(service, logger)
 	httpHandler := aggtransport.NewHTTPHandler(endpoints, logger)
 
@@ -28,6 +29,8 @@ func main() {
 		logger.Log("transport", "HTTP", "during", "Listen", "err", err)
 		os.Exit(1)
 	}
+
+	http.Handle("/metrics", promhttp.Handler())
 
 	logger.Log("transport", "HTTP", "addr", ":3003")
 	if err := http.Serve(httpListener, httpHandler); err != nil {
